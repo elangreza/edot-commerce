@@ -1,6 +1,6 @@
-package entity
+package params
 
-type Stock struct {
+type AddToCartRequest struct {
 	ProductID string `json:"product_id"`
 	Quantity  int64  `json:"quantity"`
 }

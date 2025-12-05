@@ -1,31 +1,33 @@
-package handler
-
-// go generate
-//go:generate mockgen -source=product_grpc.go -destination=./mock/mock_product_grpc.go -package=mock
+package rest
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/elangreza/edot-commerce/api/internal/params"
+	"github.com/go-chi/chi/v5"
 )
 
 type (
-	productService interface {
+	ProductService interface {
 		ListProducts(ctx context.Context, req params.ListProductsRequest) (*params.ListProductsResponse, error)
 	}
 
 	ProductHandler struct {
-		productService productService
+		svc ProductService
 	}
 )
 
-func NewProductHandler(productService productService) *ProductHandler {
-	return &ProductHandler{
-		productService: productService,
+func NewProductHandler(ar chi.Router, ps ProductService) {
+
+	authHandler := ProductHandler{
+		svc: ps,
 	}
+
+	ar.Route("/products", func(r chi.Router) {
+		r.Get("/", authHandler.ListProducts())
+	})
 }
 
 func (s *ProductHandler) ListProducts() http.HandlerFunc {
@@ -46,17 +48,12 @@ func (s *ProductHandler) ListProducts() http.HandlerFunc {
 			req.Page = int64(page)
 		}
 
-		products, err := s.productService.ListProducts(r.Context(), req)
+		products, err := s.svc.ListProducts(r.Context(), req)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			sendErrorResponse(w, http.StatusInternalServerError, err)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		err = json.NewEncoder(w).Encode(products)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		sendSuccessResponse(w, http.StatusOK, products)
 	}
 }
