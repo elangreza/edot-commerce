@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package gen;
+
+// ignore the error not found in vscode
+import "money.proto";
+
+option go_package = "github.com/elangreza/edot-commerce/proto/gen";
+
+service ProductService {
+    rpc ListProducts(ListProductsRequest) returns (ListProductsResponse) {}
+    rpc GetProducts(GetProductsRequest) returns (Products) {}
+}
+
+message Product {
+    string id = 1;
+    string name = 2;
+    string description = 3;
+    string image_url = 4;
+    Money price = 5;
+    int64 stock = 6;
+    int64 shop_id = 7;
+}
+
+message GetProductsRequest {
+    repeated string ids = 1;
+    bool withStock = 2;
+}
+
+message Products {
+    repeated Product products = 1;
+}
+
+message ListProductsResponse {
+    repeated Product products = 1;
+    int64 total = 2;
+    int64 total_pages = 3;
+}
+
+
+message ListProductsRequest {
+    string search = 1;
+    int64 limit = 2;
+    int64 page = 3;
+    string sort_by = 4;
+}
+

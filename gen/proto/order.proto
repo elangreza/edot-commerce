@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+
+package gen;
+
+// ignore the error not found in vscode
+import "money.proto";
+import "empty.proto";
+
+option go_package = "github.com/elangreza/edot-commerce/proto/gen";
+
+
+// add cart item one by one
+message AddCartItemRequest {
+    string product_id = 1;
+    int64 quantity = 2;
+}
+
+message CartItem {
+    string product_id = 1;
+    int64 quantity = 2;
+    string name = 3;
+    Money price = 4;
+    int64 actual_stock = 5;
+}
+
+message Cart {
+    string id = 1;
+    repeated CartItem items = 2;
+}
+
+message OrderItem {
+  string product_id = 1;
+  string name = 3;
+  Money price_per_unit = 4;
+  int64 quantity = 5;
+}
+
+message Order {
+  string idempotency_key = 1;
+  string id = 2;
+  string user_id = 3;
+  repeated OrderItem items = 4;
+  Money total_amount = 5;
+  string status = 6;
+}
+
+message CreateOrderRequest {
+  string idempotency_key = 1;
+}
+
+// this service contains all the methods related to checkout and order management
+// this require user_id from context metadata
+// all user must be authenticated to access this service
+// and get user_id from context metadata or interceptor
+// the cart is unique for each user
+// the cart is created when the user first add product to cart
+service OrderService {
+    rpc AddProductToCart(AddCartItemRequest) returns (Empty) {}
+    rpc GetCart(Empty) returns (Cart) {}
+    rpc CreateOrder(CreateOrderRequest) returns (Order) {}
+}
