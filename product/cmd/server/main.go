@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github/elangreza/edot-commerce/pkg/dbsql"
+	"github/elangreza/edot-commerce/pkg/gracefulshutdown"
 	"log"
+	"time"
 
 	"github.com/elangreza/edot-commerce/product/internal/client"
 	"github.com/elangreza/edot-commerce/product/internal/server"
@@ -35,10 +38,29 @@ func main() {
 
 	productService := service.NewProductService(productRepo, stockClient)
 	srv := server.New(productService)
-	if err := srv.Start(address); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-		return
-	}
+	go func() {
+		if err := srv.Start(address); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+			return
+		}
+	}()
+
+	gs := gracefulshutdown.New(context.Background(), 5*time.Second,
+		gracefulshutdown.Operation{
+			Name: "grpc",
+			ShutdownFunc: func(ctx context.Context) error {
+				srv.Close()
+				return nil
+			},
+		},
+		gracefulshutdown.Operation{
+			Name: "sqlite",
+			ShutdownFunc: func(ctx context.Context) error {
+				return db.Close()
+			},
+		},
+	)
+	<-gs
 }
 
 func errChecker(err error) {

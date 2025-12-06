@@ -15,7 +15,7 @@ type Operation struct {
 	ShutdownFunc func(ctx context.Context) error
 }
 
-func GracefulShutdown(ctx context.Context, timeout time.Duration, ops ...Operation) <-chan struct{} {
+func New(ctx context.Context, timeout time.Duration, ops ...Operation) <-chan struct{} {
 	wait := make(chan struct{})
 	go func() {
 		s := make(chan os.Signal, 1)

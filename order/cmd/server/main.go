@@ -56,7 +56,7 @@ func main() {
 	taskOrder := task.NewTaskOrder(orderService)
 	taskOrder.SetRemoveExpiryDuration(3 * time.Minute)
 
-	gs := gracefulshutdown.GracefulShutdown(context.Background(), 5*time.Second,
+	gs := gracefulshutdown.New(context.Background(), 5*time.Second,
 		gracefulshutdown.Operation{
 			Name: "grpc",
 			ShutdownFunc: func(ctx context.Context) error {
@@ -69,6 +69,12 @@ func main() {
 			ShutdownFunc: func(ctx context.Context) error {
 				taskOrder.Close()
 				return nil
+			},
+		},
+		gracefulshutdown.Operation{
+			Name: "sqlite",
+			ShutdownFunc: func(ctx context.Context) error {
+				return db.Close()
 			},
 		},
 	)

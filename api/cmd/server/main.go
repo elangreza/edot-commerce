@@ -3,13 +3,9 @@ package main
 import (
 	"context"
 	"github/elangreza/edot-commerce/pkg/dbsql"
+	"github/elangreza/edot-commerce/pkg/gracefulshutdown"
 	"log"
-	"log/slog"
 	"net/http"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
 	"time"
 
 	"github.com/elangreza/edot-commerce/api/internal/rest"
@@ -80,70 +76,23 @@ func main() {
 		}
 	}()
 
-	<-gracefulShutdown(context.Background(), 5*time.Second,
-		operation{
-			name: "server",
-			shutdownFunc: func(ctx context.Context) error {
+	gs := gracefulshutdown.New(context.Background(), 5*time.Second,
+		gracefulshutdown.Operation{
+			Name: "server",
+			ShutdownFunc: func(ctx context.Context) error {
 				return srv.Shutdown(ctx)
 			}},
-		operation{
-			name: "sqlite",
-			shutdownFunc: func(ctx context.Context) error {
+		gracefulshutdown.Operation{
+			Name: "sqlite",
+			ShutdownFunc: func(ctx context.Context) error {
 				return db.Close()
 			}},
 	)
+	<-gs
 }
 
 func errChecker(err error) {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-type operation struct {
-	name         string
-	shutdownFunc func(ctx context.Context) error
-}
-
-func gracefulShutdown(ctx context.Context, timeout time.Duration, ops ...operation) <-chan struct{} {
-	wait := make(chan struct{})
-	go func() {
-		s := make(chan os.Signal, 1)
-
-		signal.Notify(s, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-		<-s
-
-		slog.Info("shutting down")
-
-		ctx, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
-
-		go func() {
-			<-ctx.Done()
-			slog.Info("force quit the app")
-			wait <- struct{}{}
-		}()
-
-		var wg sync.WaitGroup
-
-		for key, op := range ops {
-			wg.Add(1)
-			go func(key int, op operation) {
-				defer wg.Done()
-
-				slog.Info(op.name, "shutdown", "started")
-
-				if err := op.shutdownFunc(ctx); err != nil {
-					slog.Error(op.name, "err", err.Error())
-					return
-				}
-
-				slog.Info(op.name, "shutdown", "finished")
-			}(key, op)
-		}
-
-		wg.Wait()
-	}()
-
-	return wait
 }
