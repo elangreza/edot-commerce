@@ -132,7 +132,12 @@ func (r *StockRepo) ReserveStock(ctx context.Context, reserveStock entity.Reserv
 					return err
 				}
 
-				result, err := tx.ExecContext(ctx, `INSERT INTO reserved_stocks (stock_id, quantity, user_id, status) VALUES (?, ?, ?, ?)`, currStock.ID, qty, reserveStock.UserID, constanta.ReservedStockStatusReserved)
+				result, err := tx.ExecContext(ctx, `INSERT INTO reserved_stocks (stock_id, quantity, user_id, status, order_id) VALUES (?, ?, ?, ?, ?)`,
+					currStock.ID,
+					qty,
+					reserveStock.UserID,
+					constanta.ReservedStockStatusReserved,
+					reserveStock.OrderID)
 				if err != nil {
 					return err
 				}
@@ -161,7 +166,24 @@ func (r *StockRepo) ReserveStock(ctx context.Context, reserveStock entity.Reserv
 func (r *StockRepo) ReleaseStock(ctx context.Context, releaseStock entity.ReleaseStock) ([]int64, error) {
 	releasedStockIDs := []int64{}
 	err := dbsql.WithTransaction(r.db, func(tx *sql.Tx) error {
-		for _, reservedStockID := range releaseStock.ReservedStockIDs {
+
+		reversedStockIDs := []int64{}
+		rows, err := tx.QueryContext(ctx, `SELECT id FROM reserved_stocks WHERE user_id = ? AND order_id = ?`, releaseStock.UserID, releaseStock.OrderID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var id int64
+			err := rows.Scan(&id)
+			if err != nil {
+				return err
+			}
+			reversedStockIDs = append(reversedStockIDs, id)
+		}
+
+		for _, reservedStockID := range reversedStockIDs {
 			var quantity, stockID int
 			err := tx.QueryRowContext(ctx, `SELECT quantity, stock_id FROM reserved_stocks WHERE id = ? AND user_id = ? AND status = ?`, reservedStockID, releaseStock.UserID, constanta.ReservedStockStatusReserved).Scan(&quantity, &stockID)
 			if err != nil {

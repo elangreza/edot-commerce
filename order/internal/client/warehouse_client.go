@@ -34,7 +34,7 @@ func (s *warehouseServiceClient) GetStocks(ctx context.Context, productIds []str
 }
 
 // reserve stock after order is created
-func (s *warehouseServiceClient) ReserveStock(ctx context.Context, cartItem []entity.CartItem) (*gen.ReserveStockResponse, error) {
+func (s *warehouseServiceClient) ReserveStock(ctx context.Context, orderID uuid.UUID, cartItem []entity.CartItem) (*gen.ReserveStockResponse, error) {
 
 	userID, ok := ctx.Value(globalcontanta.UserIDKey).(uuid.UUID)
 	if !ok {
@@ -54,12 +54,13 @@ func (s *warehouseServiceClient) ReserveStock(ctx context.Context, cartItem []en
 
 	// add user id in context
 	return s.client.ReserveStock(newCtx, &gen.ReserveStockRequest{
-		Stocks: stocks,
+		Stocks:  stocks,
+		OrderId: orderID.String(),
 	})
 }
 
 // release stock when creating order is failed or order is cancelled
-func (s *warehouseServiceClient) ReleaseStock(ctx context.Context, reservedStockIds []int64) (*gen.ReleaseStockResponse, error) {
+func (s *warehouseServiceClient) ReleaseStock(ctx context.Context, orderID uuid.UUID) (*gen.ReleaseStockResponse, error) {
 	userID, ok := ctx.Value(globalcontanta.UserIDKey).(uuid.UUID)
 	if !ok {
 		return nil, errors.New("not valid user id")
@@ -69,6 +70,6 @@ func (s *warehouseServiceClient) ReleaseStock(ctx context.Context, reservedStock
 	newCtx := metadata.NewOutgoingContext(context.Background(), md)
 
 	return s.client.ReleaseStock(newCtx, &gen.ReleaseStockRequest{
-		ReservedStockIds: reservedStockIds,
+		OrderId: orderID.String(),
 	})
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	globalcontanta "github/elangreza/edot-commerce/pkg/globalcontanta"
 	"github/elangreza/edot-commerce/pkg/money"
+	"time"
 
 	"github.com/elangreza/edot-commerce/gen"
 	"github.com/elangreza/edot-commerce/order/internal/constanta"
@@ -30,12 +31,14 @@ type (
 		CreateOrder(ctx context.Context, order entity.Order) (uuid.UUID, error)
 		GetOrderByIdempotencyKey(ctx context.Context, idempotencyKey uuid.UUID) (*entity.Order, error)
 		UpdateOrder(ctx context.Context, payloads map[string]any, orderID uuid.UUID) error
+		GetExpiryOrders(ctx context.Context, duration time.Duration) ([]entity.Order, error)
+		UpdateOrderStatusWithCallback(ctx context.Context, status constanta.OrderStatus, orderID uuid.UUID, callback func() error) error
 	}
 
-	stockServiceClient interface {
+	warehouseServiceClient interface {
 		GetStocks(ctx context.Context, productIds []string) (*gen.StockList, error)
-		ReserveStock(ctx context.Context, cartItem []entity.CartItem) (*gen.ReserveStockResponse, error)
-		ReleaseStock(ctx context.Context, reservedStockIds []int64) (*gen.ReleaseStockResponse, error)
+		ReserveStock(ctx context.Context, orderID uuid.UUID, cartItem []entity.CartItem) (*gen.ReserveStockResponse, error)
+		ReleaseStock(ctx context.Context, orderID uuid.UUID) (*gen.ReleaseStockResponse, error)
 	}
 
 	productServiceClient interface {
@@ -44,24 +47,24 @@ type (
 )
 
 type orderService struct {
-	orderRepo            orderRepo
-	cartRepo             cartRepo
-	stockServiceClient   stockServiceClient
-	productServiceClient productServiceClient
+	orderRepo              orderRepo
+	cartRepo               cartRepo
+	warehouseServiceClient warehouseServiceClient
+	productServiceClient   productServiceClient
 	gen.UnimplementedOrderServiceServer
 }
 
 func NewOrderService(
 	orderRepo orderRepo,
 	cartRepo cartRepo,
-	stockServiceClient stockServiceClient,
+	stockServiceClient warehouseServiceClient,
 	productServiceClient productServiceClient,
 ) *orderService {
 	return &orderService{
-		orderRepo:            orderRepo,
-		cartRepo:             cartRepo,
-		stockServiceClient:   stockServiceClient,
-		productServiceClient: productServiceClient,
+		orderRepo:              orderRepo,
+		cartRepo:               cartRepo,
+		warehouseServiceClient: stockServiceClient,
+		productServiceClient:   productServiceClient,
 	}
 }
 
@@ -174,7 +177,7 @@ func (s *orderService) GetCart(ctx context.Context, req *gen.Empty) (*gen.Cart, 
 		productIDs = append(productIDs, item.ProductID)
 	}
 
-	stocks, err := s.stockServiceClient.GetStocks(ctx, productIDs)
+	stocks, err := s.warehouseServiceClient.GetStocks(ctx, productIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +318,7 @@ func (s *orderService) CreateOrder(ctx context.Context, req *gen.CreateOrderRequ
 
 	// Reserve stock
 	// reserveIDs, err := s.stockServiceClient.ReserveStock(ctx, cart.Items)
-	_, err = s.stockServiceClient.ReserveStock(ctx, cart.Items)
+	_, err = s.warehouseServiceClient.ReserveStock(ctx, orderID, cart.Items)
 	if err != nil {
 		rollbackErr := rollback()
 		if rollbackErr != nil {
@@ -330,15 +333,54 @@ func (s *orderService) CreateOrder(ctx context.Context, req *gen.CreateOrderRequ
 		"status": constanta.OrderStatusStockReserved,
 	}, orderID)
 	if err != nil {
-		// Payment succeeded but status update failed - log this inconsistency
-		fmt.Printf("Payment succeeded but status update failed: %v", err)
+		// status update failed - log this inconsistency
+		fmt.Printf("status update failed: %v", err)
 		// Consider whether to return an error or continue with partial success
 		// For now, we'll return the error to indicate the operation didn't complete successfully
-		return nil, fmt.Errorf("payment succeeded but failed to update order with transaction ID: %w", err)
+		return nil, fmt.Errorf("failed to update order with transaction ID: %w", err)
 	}
 
 	order.ID = orderID
 	order.Status = constanta.OrderStatusStockReserved
 
 	return order.GetGenOrder(), nil
+}
+
+func (s *orderService) RemoveExpiryOrder(ctx context.Context, duration time.Duration) (int, error) {
+	orders, err := s.orderRepo.GetExpiryOrders(ctx, duration)
+	if err != nil {
+		return 0, err
+	}
+
+	for _, order := range orders {
+
+		if order.Status == constanta.OrderStatusFailed {
+			err = s.orderRepo.UpdateOrder(ctx, map[string]any{
+				"status": constanta.OrderStatusStockReserved,
+			}, order.ID)
+			if err != nil {
+				fmt.Println("err when Update status", err)
+			}
+		}
+
+		if order.Status == constanta.OrderStatusStockReserved {
+			var releaseStock = func() error {
+				ctx = context.WithValue(context.Background(), globalcontanta.UserIDKey, order.UserID)
+				_, err := s.warehouseServiceClient.ReleaseStock(ctx, order.ID)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}
+
+			err := s.orderRepo.UpdateOrderStatusWithCallback(ctx, constanta.OrderStatusFailed, order.ID, releaseStock)
+			if err != nil {
+				fmt.Println("err when Release Stock", err)
+			}
+
+		}
+	}
+
+	return len(orders), nil
 }

@@ -9,6 +9,7 @@ import (
 	"github/elangreza/edot-commerce/pkg/dbsql"
 	"github/elangreza/edot-commerce/pkg/money"
 
+	"github.com/elangreza/edot-commerce/order/internal/constanta"
 	"github.com/elangreza/edot-commerce/order/internal/entity"
 	"github.com/google/uuid"
 )
@@ -200,5 +201,59 @@ func (r *OrderRepository) UpdateOrder(ctx context.Context, payloads map[string]a
 		return err
 	}
 
+	return nil
+}
+
+func (r *OrderRepository) GetExpiryOrders(ctx context.Context, duration time.Duration) ([]entity.Order, error) {
+	q := `SELECT 
+	id,
+	status,
+	user_id
+	FROM orders WHERE (status = ? OR status = ?) AND created_at < DATETIME(?);`
+
+	timeLimit := time.Now().UTC().Add(-duration)
+
+	rows, err := r.db.QueryContext(ctx,
+		q,
+		constanta.OrderStatusPending,
+		constanta.OrderStatusStockReserved,
+		timeLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	orders := []entity.Order{}
+	for rows.Next() {
+		var order entity.Order
+		err := rows.Scan(&order.ID, &order.Status, &order.UserID)
+		if err != nil {
+			return nil, err
+		}
+
+		orders = append(orders, order)
+	}
+
+	return orders, nil
+}
+
+func (r *OrderRepository) UpdateOrderStatusWithCallback(ctx context.Context, status constanta.OrderStatus, orderID uuid.UUID, callback func() error) error {
+	err := dbsql.WithTransaction(r.db, func(tx *sql.Tx) error {
+		_, err := tx.ExecContext(ctx, `UPDATE orders SET status = ? WHERE id = ?`, status, orderID)
+		if err != nil {
+			return err
+		}
+
+		err = callback()
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }

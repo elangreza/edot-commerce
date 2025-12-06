@@ -77,8 +77,9 @@ func (s *WarehouseService) ReserveStock(ctx context.Context, req *gen.ReserveSto
 	}
 
 	reservedStockIDs, err := s.repo.ReserveStock(ctx, entity.ReserveStock{
-		Stocks: stocks,
-		UserID: userID,
+		Stocks:  stocks,
+		UserID:  userID,
+		OrderID: req.OrderId,
 	})
 	if err != nil {
 		return nil, err
@@ -106,8 +107,8 @@ func (s *WarehouseService) ReleaseStock(ctx context.Context, req *gen.ReleaseSto
 	}
 
 	releasedStockIDs, err := s.repo.ReleaseStock(ctx, entity.ReleaseStock{
-		ReservedStockIDs: req.ReservedStockIds,
-		UserID:           userID,
+		OrderID: req.OrderId,
+		UserID:  userID,
 	})
 	if err != nil {
 		return nil, err

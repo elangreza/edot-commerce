@@ -9,13 +9,15 @@ type Stock struct {
 }
 
 type ReserveStock struct {
-	Stocks []Stock   `json:"stocks"`
-	UserID uuid.UUID `json:"user_id"`
+	Stocks  []Stock   `json:"stocks"`
+	OrderID string    `json:"order_id"`
+	UserID  uuid.UUID `json:"user_id"`
 }
 
 type ReleaseStock struct {
-	ReservedStockIDs []int64   `json:"reserved_stock_id"`
-	UserID           uuid.UUID `json:"user_id"`
+	// ReservedStockIDs []int64   `json:"reserved_stock_id"`
+	OrderID string    `json:"order_id"`
+	UserID  uuid.UUID `json:"user_id"`
 }
 
 type ConfirmStock struct {
