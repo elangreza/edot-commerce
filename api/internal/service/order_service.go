@@ -40,7 +40,7 @@ func (s *orderService) AddProductToCart(ctx context.Context, req params.AddToCar
 	})
 
 	if err != nil {
-		return err
+		return convertErrGrpc(err)
 	}
 
 	return nil
@@ -59,7 +59,7 @@ func (s *orderService) GetCart(ctx context.Context) (*params.GetCartResponse, er
 	cart, err := s.orderServiceClient.GetCart(newCtx, &gen.Empty{})
 
 	if err != nil {
-		return nil, err
+		return nil, convertErrGrpc(err)
 	}
 
 	res := &params.GetCartResponse{
@@ -92,7 +92,7 @@ func (s *orderService) CreateOrder(ctx context.Context, req params.CreateOrderRe
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, convertErrGrpc(err)
 	}
 
 	res := &params.CreateOrderResponse{

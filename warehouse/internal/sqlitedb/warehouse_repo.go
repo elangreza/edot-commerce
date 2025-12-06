@@ -26,7 +26,13 @@ func (r *StockRepo) GetStocks(ctx context.Context, productIDs []string) ([]*enti
 
 	placeholders := strings.Repeat("?,", len(productIDs))
 	placeholders = strings.TrimRight(placeholders, ",")
-	query := fmt.Sprintf(`SELECT product_id, quantity FROM stocks WHERE product_id IN (%s) and quantity > 0`, placeholders)
+	query := fmt.Sprintf(`SELECT 
+		s.product_id, s.quantity 
+		FROM 
+			stocks s
+		LEFT JOIN warehouses w ON w.id = s.warehouse_id 
+		WHERE 
+			w.is_active IS TRUE AND s.product_id IN (%s) AND s.quantity > 0`, placeholders)
 	args := make([]any, len(productIDs))
 	for i, id := range productIDs {
 		args[i] = id
@@ -55,9 +61,10 @@ func (r *StockRepo) ReserveStock(ctx context.Context, reserveStock entity.Reserv
 		for _, reqStock := range reserveStock.Stocks {
 			var currQuantity int64
 			err := tx.QueryRowContext(ctx, `
-			SELECT SUM(quantity) as total_qty
-				FROM stocks
-			WHERE product_id = ?;`,
+			SELECT SUM(s.quantity) as total_qty
+				FROM stocks s
+			LEFT JOIN warehouses w ON w.id = s.warehouse_id 
+			WHERE w.is_active IS TRUE AND s.product_id = ?;`,
 				reqStock.ProductID).Scan(&currQuantity)
 			if err != nil {
 				if err == sql.ErrNoRows {
@@ -83,12 +90,13 @@ func (r *StockRepo) ReserveStock(ctx context.Context, reserveStock entity.Reserv
 					quantity
 				FROM (
 					SELECT 
-						id, 
-						quantity, 
-						created_at,
-						SUM(quantity) OVER (ORDER BY created_at, id ASC) AS running_total
-					FROM stocks
-					WHERE product_id = ?
+						s.id, 
+						s.quantity, 
+						s.created_at,
+						SUM(s.quantity) OVER (ORDER BY s.created_at, s.id ASC) AS running_total
+					FROM stocks s
+					LEFT JOIN warehouses w ON w.id = s.warehouse_id 
+					WHERE w.is_active IS TRUE AND s.product_id = ?
 				) s
 				WHERE 
 					running_total <= ? 

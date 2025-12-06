@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github/elangreza/edot-commerce/pkg/extractor"
 	globalcontanta "github/elangreza/edot-commerce/pkg/globalcontanta"
 	"github/elangreza/edot-commerce/pkg/money"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/elangreza/edot-commerce/order/internal/entity"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -69,19 +69,9 @@ func NewOrderService(
 }
 
 func (s *orderService) AddProductToCart(ctx context.Context, req *gen.AddCartItemRequest) (*gen.Empty, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, errors.New("unauthorized")
-	}
-	rawUserID := md.Get(string(globalcontanta.UserIDKey))
-
-	if len(rawUserID) == 0 {
-		return nil, errors.New("not valid userID")
-	}
-
-	userID, err := uuid.Parse(rawUserID[0])
+	userID, err := extractor.ExtractUserIDFromMetadata(ctx)
 	if err != nil {
-		return nil, errors.New("failed to parse userID")
+		return nil, err
 	}
 
 	cart, err := s.cartRepo.GetCartByUserID(ctx, userID)
@@ -89,15 +79,20 @@ func (s *orderService) AddProductToCart(ctx context.Context, req *gen.AddCartIte
 		return nil, err
 	}
 
-	products, err := s.productServiceClient.GetProducts(ctx, false, req.ProductId)
+	withStock := true
+	products, err := s.productServiceClient.GetProducts(ctx, withStock, req.ProductId)
 	if err != nil {
 		return nil, err
 	}
 	if products == nil || products.Products == nil || len(products.Products) == 0 {
-		return nil, errors.New("product not found")
+		return nil, status.Error(codes.NotFound, "product not found")
 	}
 
 	product := products.Products[0]
+
+	if req.Quantity > product.Stock {
+		return nil, status.Errorf(codes.InvalidArgument, "quantity cannot exceed the maximum stock, current stock is %d", product.Stock)
+	}
 
 	if cart == nil {
 		cart = &entity.Cart{
@@ -136,23 +131,16 @@ func (s *orderService) AddProductToCart(ctx context.Context, req *gen.AddCartIte
 }
 
 func (s *orderService) GetCart(ctx context.Context, req *gen.Empty) (*gen.Cart, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, errors.New("unauthorized")
-	}
-	rawUserID := md.Get(string(globalcontanta.UserIDKey))
-
-	if len(rawUserID) == 0 {
-		return nil, errors.New("not valid userID")
-	}
-
-	userID, err := uuid.Parse(rawUserID[0])
+	userID, err := extractor.ExtractUserIDFromMetadata(ctx)
 	if err != nil {
-		return nil, errors.New("failed to parse userID")
+		return nil, err
 	}
 
 	cart, err := s.cartRepo.GetCartByUserID(ctx, userID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, status.Errorf(codes.NotFound, "cart not found")
+		}
 		return nil, err
 	}
 
@@ -212,19 +200,9 @@ func (s *orderService) CreateOrder(ctx context.Context, req *gen.CreateOrderRequ
 		return ord.GetGenOrder(), nil
 	}
 
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, errors.New("unauthorized")
-	}
-	rawUserID := md.Get(string(globalcontanta.UserIDKey))
-
-	if len(rawUserID) == 0 {
-		return nil, errors.New("not valid userID")
-	}
-
-	userID, err := uuid.Parse(rawUserID[0])
+	userID, err := extractor.ExtractUserIDFromMetadata(ctx)
 	if err != nil {
-		return nil, errors.New("failed to parse userID")
+		return nil, err
 	}
 
 	cart, err := s.cartRepo.GetCartByUserID(ctx, userID)
@@ -232,7 +210,7 @@ func (s *orderService) CreateOrder(ctx context.Context, req *gen.CreateOrderRequ
 		return nil, fmt.Errorf("failed to get cart: %w", err)
 	}
 	if cart == nil || len(cart.Items) == 0 {
-		return nil, errors.New("cart is empty")
+		return nil, status.Errorf(codes.NotFound, "cart not found")
 	}
 
 	for _, item := range cart.Items {
@@ -260,7 +238,7 @@ func (s *orderService) CreateOrder(ctx context.Context, req *gen.CreateOrderRequ
 	for _, item := range cart.Items {
 		product, ok := productsMap[item.ProductID]
 		if !ok {
-			return nil, fmt.Errorf("failed to fetch product %s", item.ProductID)
+			return nil, status.Errorf(codes.NotFound, "product not found")
 		}
 
 		price := product.GetPrice()
@@ -272,7 +250,7 @@ func (s *orderService) CreateOrder(ctx context.Context, req *gen.CreateOrderRequ
 		if cartCurrency == "" {
 			cartCurrency = price.GetCurrencyCode()
 		} else if cartCurrency != price.GetCurrencyCode() {
-			return nil, errors.New("mixed currencies in cart are not supported")
+			return nil, status.Errorf(codes.InvalidArgument, "mixed currencies in cart are not supported")
 		}
 
 		totalPricePerUnit, err := money.MultiplyByInt(price, item.Quantity)
@@ -354,9 +332,9 @@ func (s *orderService) RemoveExpiryOrder(ctx context.Context, duration time.Dura
 
 	for _, order := range orders {
 
-		if order.Status == constanta.OrderStatusFailed {
+		if order.Status == constanta.OrderStatusPending {
 			err = s.orderRepo.UpdateOrder(ctx, map[string]any{
-				"status": constanta.OrderStatusStockReserved,
+				"status": constanta.OrderStatusFailed,
 			}, order.ID)
 			if err != nil {
 				fmt.Println("err when Update status", err)

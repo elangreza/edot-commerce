@@ -2,13 +2,11 @@ package service
 
 import (
 	"context"
-	"errors"
-	"github/elangreza/edot-commerce/pkg/globalcontanta"
+	"github/elangreza/edot-commerce/pkg/extractor"
 	"github/elangreza/edot-commerce/warehouse/internal/entity"
 
 	"github.com/elangreza/edot-commerce/gen"
 	"github.com/google/uuid"
-	"google.golang.org/grpc/metadata"
 )
 
 type (
@@ -49,19 +47,9 @@ func (s *WarehouseService) GetStocks(ctx context.Context, req *gen.GetStockReque
 }
 
 func (s *WarehouseService) ReserveStock(ctx context.Context, req *gen.ReserveStockRequest) (*gen.ReserveStockResponse, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, errors.New("unauthorized")
-	}
-	rawUserID := md.Get(string(globalcontanta.UserIDKey))
-
-	if len(rawUserID) == 0 {
-		return nil, errors.New("not valid userID")
-	}
-
-	userID, err := uuid.Parse(rawUserID[0])
+	userID, err := extractor.ExtractUserIDFromMetadata(ctx)
 	if err != nil {
-		return nil, errors.New("failed to parse userID")
+		return nil, err
 	}
 
 	stocks := make([]entity.Stock, len(req.Stocks))
@@ -92,19 +80,9 @@ func (s *WarehouseService) ReserveStock(ctx context.Context, req *gen.ReserveSto
 }
 
 func (s *WarehouseService) ReleaseStock(ctx context.Context, req *gen.ReleaseStockRequest) (*gen.ReleaseStockResponse, error) {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, errors.New("unauthorized")
-	}
-	rawUserID := md.Get(string(globalcontanta.UserIDKey))
-
-	if len(rawUserID) == 0 {
-		return nil, errors.New("not valid userID")
-	}
-
-	userID, err := uuid.Parse(rawUserID[0])
+	userID, err := extractor.ExtractUserIDFromMetadata(ctx)
 	if err != nil {
-		return nil, errors.New("failed to parse userID")
+		return nil, err
 	}
 
 	releasedStockIDs, err := s.repo.ReleaseStock(ctx, entity.ReleaseStock{
@@ -125,6 +103,10 @@ func (s *WarehouseService) SetWarehouseStatus(ctx context.Context, req *gen.SetW
 	if err != nil {
 		return nil, err
 	}
+
+	// if req.iSActive is false
+	// release the stock
+	// and notify the
 
 	return &gen.Empty{}, nil
 }

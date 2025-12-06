@@ -79,7 +79,7 @@ func (oh *orderHandler) GetCart() http.HandlerFunc {
 			return
 		}
 
-		sendSuccessResponse(w, http.StatusCreated, cart)
+		sendSuccessResponse(w, http.StatusOK, cart)
 	}
 }
 

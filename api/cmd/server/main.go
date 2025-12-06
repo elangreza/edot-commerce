@@ -58,9 +58,14 @@ func main() {
 	errChecker(err)
 	orderService := service.NewOrderService(gen.NewOrderServiceClient(grpcClientOrder))
 
+	grpcClientWarehouse, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	errChecker(err)
+	warehouseService := service.NewWarehouseService(gen.NewWarehouseServiceClient(grpcClientWarehouse))
+
 	rest.NewAuthHandler(handler, authService)
 	rest.NewProductHandler(handler, productServiceClient)
 	rest.NewOrderHandler(handler, authService, orderService)
+	rest.NewWarehouseHandler(handler, authService, warehouseService)
 
 	srv := &http.Server{
 		Addr:           ":8080",

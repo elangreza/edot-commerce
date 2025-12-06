@@ -38,7 +38,7 @@ func (s *WarehouseService) SetWarehouseStatus(ctx context.Context, req params.Se
 		IsActive:    req.IsActive,
 	})
 	if err != nil {
-		return err
+		return convertErrGrpc(err)
 	}
 
 	return nil

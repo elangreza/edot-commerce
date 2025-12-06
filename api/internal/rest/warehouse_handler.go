@@ -36,11 +36,11 @@ func NewWarehouseHandler(
 
 	publicRoute.Group(func(r chi.Router) {
 		r.Use(authMiddleware.MustAuthMiddleware())
-		r.Post("/warehouse/status", oh.CreateWarehouse())
+		r.Post("/warehouse/status", oh.SetWarehouseStatus())
 	})
 }
 
-func (oh *WarehouseHandler) CreateWarehouse() http.HandlerFunc {
+func (oh *WarehouseHandler) SetWarehouseStatus() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		body := params.SetWarehouseStatusRequest{}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -56,6 +56,6 @@ func (oh *WarehouseHandler) CreateWarehouse() http.HandlerFunc {
 			return
 		}
 
-		sendSuccessResponse(w, http.StatusCreated, "ok")
+		sendSuccessResponse(w, http.StatusOK, "ok")
 	}
 }

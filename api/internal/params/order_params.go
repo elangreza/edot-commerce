@@ -24,7 +24,7 @@ func (a *AddToCartRequest) Validate() error {
 
 type (
 	GetCartItemsResponse struct {
-		ProductID string `json:"cart_id"`
+		ProductID string `json:"product_id"`
 		Quantity  int64  `json:"quantity"`
 	}
 
@@ -40,7 +40,7 @@ type (
 	}
 
 	CreateOrderItemsResponse struct {
-		ProductID    string `json:"cart_id"`
+		ProductID    string `json:"product_id"`
 		Quantity     int64  `json:"quantity"`
 		Name         string `json:"name"`
 		PricePerUnit *Money `json:"price_per_unit"`

@@ -29,7 +29,7 @@ func (s *productService) ListProducts(ctx context.Context, req params.ListProduc
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, convertErrGrpc(err)
 	}
 
 	res := &params.ListProductsResponse{
