@@ -25,7 +25,7 @@ func (r *CartRepository) GetCartByUserID(ctx context.Context, userID uuid.UUID) 
 
 	q := `
 	SELECT id, user_id
-	FROM carts WHERE user_id = ?;`
+	FROM carts WHERE user_id = ? AND is_active IS TRUE;`
 
 	var cart entity.Cart
 	err := r.db.QueryRowContext(ctx, q, userID).Scan(
@@ -86,10 +86,11 @@ func (r *CartRepository) CreateCart(ctx context.Context, cart entity.Cart) error
 	}
 
 	err = dbsql.WithTransaction(r.db, func(tx *sql.Tx) error {
-		q := `INSERT INTO carts (id, user_id) VALUES (?, ?);`
+		q := `INSERT INTO carts (id, user_id, is_active) VALUES (?, ?, ?);`
 		_, err := tx.ExecContext(ctx, q,
 			cartID,
 			cart.UserID,
+			true,
 		)
 		if err != nil {
 			return err

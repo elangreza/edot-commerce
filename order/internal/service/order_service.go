@@ -83,17 +83,14 @@ func (s *orderService) AddProductToCart(ctx context.Context, req *gen.AddCartIte
 
 	cart, err := s.cartRepo.GetCartByUserID(ctx, userID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		fmt.Println(1, err)
 		return nil, err
 	}
 
 	products, err := s.productServiceClient.GetProducts(ctx, false, req.ProductId)
 	if err != nil {
-		fmt.Println(2, err)
 		return nil, err
 	}
 	if products == nil || products.Products == nil || len(products.Products) == 0 {
-		fmt.Println(3, err)
 		return nil, errors.New("product not found")
 	}
 
@@ -114,7 +111,6 @@ func (s *orderService) AddProductToCart(ctx context.Context, req *gen.AddCartIte
 
 		err = s.cartRepo.CreateCart(ctx, *cart)
 		if err != nil {
-			fmt.Println(4, err)
 			return nil, err
 		}
 
@@ -130,7 +126,6 @@ func (s *orderService) AddProductToCart(ctx context.Context, req *gen.AddCartIte
 		Price:     product.GetPrice(),
 	})
 	if err != nil {
-		fmt.Println(5, err)
 		return nil, err
 	}
 
@@ -316,6 +311,8 @@ func (s *orderService) CreateOrder(ctx context.Context, req *gen.CreateOrderRequ
 		}, orderID)
 	}
 
+	ctx = context.WithValue(ctx, globalcontanta.UserIDKey, userID)
+
 	// Reserve stock
 	// reserveIDs, err := s.stockServiceClient.ReserveStock(ctx, cart.Items)
 	_, err = s.stockServiceClient.ReserveStock(ctx, cart.Items)
@@ -341,5 +338,7 @@ func (s *orderService) CreateOrder(ctx context.Context, req *gen.CreateOrderRequ
 	}
 
 	order.ID = orderID
-	return ord.GetGenOrder(), nil
+	order.Status = constanta.OrderStatusStockReserved
+
+	return order.GetGenOrder(), nil
 }

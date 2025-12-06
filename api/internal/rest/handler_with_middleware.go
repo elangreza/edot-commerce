@@ -14,6 +14,7 @@ type (
 	OrderService interface {
 		AddProductToCart(ctx context.Context, req params.AddToCartRequest) error
 		GetCart(ctx context.Context) (*params.GetCartResponse, error)
+		CreateOrder(ctx context.Context, req params.CreateOrderRequest) (*params.CreateOrderResponse, error)
 	}
 
 	orderHandler struct {
@@ -37,6 +38,7 @@ func NewOrderHandler(
 
 	publicRoute.Group(func(r chi.Router) {
 		r.Use(authMiddleware.MustAuthMiddleware())
+		r.Post("/order", oh.CreateOrder())
 		r.Post("/cart", oh.AddProductToCart())
 		r.Get("/cart", oh.GetCart())
 	})
@@ -78,5 +80,30 @@ func (oh *orderHandler) GetCart() http.HandlerFunc {
 		}
 
 		sendSuccessResponse(w, http.StatusCreated, cart)
+	}
+}
+
+func (oh *orderHandler) CreateOrder() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body := params.CreateOrderRequest{}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			sendErrorResponse(w, http.StatusBadRequest, errs.ValidationError{Message: err.Error()})
+			return
+		}
+
+		if err := body.Validate(); err != nil {
+			sendErrorResponse(w, http.StatusBadRequest, err)
+			return
+		}
+
+		ctx := r.Context()
+
+		order, err := oh.svc.CreateOrder(ctx, body)
+		if err != nil {
+			sendErrorResponse(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		sendSuccessResponse(w, http.StatusCreated, order)
 	}
 }

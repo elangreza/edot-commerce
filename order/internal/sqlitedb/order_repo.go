@@ -60,7 +60,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order entity.Order) (
 				currency,
 				quantity,
 				total_price_units
-			) VALUES(?, ?, ?, ?, ?)`,
+			) VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
 				orderItemID,
 				orderID,
 				item.ProductID,
@@ -74,6 +74,12 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order entity.Order) (
 				return err
 			}
 		}
+
+		_, err = tx.ExecContext(ctx, "UPDATE carts SET is_active = FALSE WHERE user_id = ?", order.UserID)
+		if err != nil {
+			return err
+		}
+
 		return nil
 	})
 

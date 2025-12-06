@@ -3,11 +3,12 @@ package service
 import (
 	"context"
 	"errors"
-	"github/elangreza/edot-commerce/warehouse/internal/constanta"
+	"github/elangreza/edot-commerce/pkg/globalcontanta"
 	"github/elangreza/edot-commerce/warehouse/internal/entity"
 
 	"github.com/elangreza/edot-commerce/gen"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/metadata"
 )
 
 type (
@@ -47,9 +48,19 @@ func (s *WarehouseService) GetStocks(ctx context.Context, req *gen.GetStockReque
 }
 
 func (s *WarehouseService) ReserveStock(ctx context.Context, req *gen.ReserveStockRequest) (*gen.ReserveStockResponse, error) {
-	userID, ok := ctx.Value(constanta.UserIDKey).(uuid.UUID)
+	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, errors.New("unauthorized")
+	}
+	rawUserID := md.Get(string(globalcontanta.UserIDKey))
+
+	if len(rawUserID) == 0 {
+		return nil, errors.New("not valid userID")
+	}
+
+	userID, err := uuid.Parse(rawUserID[0])
+	if err != nil {
+		return nil, errors.New("failed to parse userID")
 	}
 
 	stocks := make([]entity.Stock, len(req.Stocks))
@@ -79,9 +90,19 @@ func (s *WarehouseService) ReserveStock(ctx context.Context, req *gen.ReserveSto
 }
 
 func (s *WarehouseService) ReleaseStock(ctx context.Context, req *gen.ReleaseStockRequest) (*gen.ReleaseStockResponse, error) {
-	userID, ok := ctx.Value(constanta.UserIDKey).(uuid.UUID)
+	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, errors.New("unauthorized")
+	}
+	rawUserID := md.Get(string(globalcontanta.UserIDKey))
+
+	if len(rawUserID) == 0 {
+		return nil, errors.New("not valid userID")
+	}
+
+	userID, err := uuid.Parse(rawUserID[0])
+	if err != nil {
+		return nil, errors.New("failed to parse userID")
 	}
 
 	releasedStockIDs, err := s.repo.ReleaseStock(ctx, entity.ReleaseStock{

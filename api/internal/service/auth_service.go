@@ -65,7 +65,6 @@ func (as *AuthService) RegisterUser(ctx context.Context, req params.RegisterUser
 func (as *AuthService) LoginUser(ctx context.Context, req params.LoginUserRequest) (string, error) {
 	user, err := as.UserRepo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		fmt.Println("1", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", errs.NotFound{Message: fmt.Sprintf("email %s", req.Email)}
 		}
@@ -74,15 +73,11 @@ func (as *AuthService) LoginUser(ctx context.Context, req params.LoginUserReques
 
 	ok := user.IsPasswordValid(req.Password)
 	if !ok {
-		fmt.Println("2", "err pass")
-
 		return "", errs.InvalidCredential{}
 	}
 
 	token, err := as.TokenRepo.GetTokenByUserID(ctx, user.ID)
 	if err != nil && err != sql.ErrNoRows {
-		fmt.Println("3", err)
-
 		return "", err
 	}
 
@@ -95,15 +90,11 @@ func (as *AuthService) LoginUser(ctx context.Context, req params.LoginUserReques
 
 	token, err = entity.NewToken([]byte(constanta.AuthenticationSigningKey), user.ID, "LOGIN")
 	if err != nil {
-		fmt.Println("4", err)
-
 		return "", err
 	}
 
 	err = as.TokenRepo.CreateToken(ctx, *token)
 	if err != nil {
-		fmt.Println("5", err)
-
 		return "", err
 	}
 

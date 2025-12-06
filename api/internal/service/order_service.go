@@ -76,3 +76,41 @@ func (s *orderService) GetCart(ctx context.Context) (*params.GetCartResponse, er
 
 	return res, nil
 }
+
+func (s *orderService) CreateOrder(ctx context.Context, req params.CreateOrderRequest) (*params.CreateOrderResponse, error) {
+
+	userID, ok := ctx.Value(constanta.LocalUserID).(uuid.UUID)
+	if !ok {
+		return nil, errors.New("error when parsing userID")
+	}
+
+	md := metadata.New(map[string]string{string(globalcontanta.UserIDKey): userID.String()})
+	newCtx := metadata.NewOutgoingContext(context.Background(), md)
+
+	order, err := s.orderServiceClient.CreateOrder(newCtx, &gen.CreateOrderRequest{
+		IdempotencyKey: req.IdempotencyKey,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	res := &params.CreateOrderResponse{
+		OrderID: order.Id,
+		Items:   []params.GetCartItemsResponse{},
+		TotalAmount: &params.Money{
+			Units:        order.TotalAmount.Units,
+			CurrencyCode: order.TotalAmount.CurrencyCode,
+		},
+		Status: order.Status,
+	}
+
+	for _, item := range order.Items {
+		res.Items = append(res.Items, params.GetCartItemsResponse{
+			ProductID: item.ProductId,
+			Quantity:  item.Quantity,
+		})
+	}
+
+	return res, nil
+}

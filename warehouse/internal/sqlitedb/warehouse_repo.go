@@ -78,23 +78,25 @@ func (r *StockRepo) ReserveStock(ctx context.Context, reserveStock entity.Reserv
 			currentStocks := []entity.Stock{}
 
 			rows, err := tx.QueryContext(ctx, `
-			SELECT 
-				id, 
-				quantity
-			FROM (
 				SELECT 
 					id, 
-					quantity, 
-					created_at,
-					SUM(quantity) OVER (ORDER BY created_at ASC) AS running_total
-				FROM stocks
-				WHERE product_id = ?
-				ORDER BY created_at ASC
-			) 
-			WHERE running_total <= ? OR (
-				running_total > ? AND (running_total - quantity) < ?
-			)
-			ORDER BY created_at ASC;
+					quantity
+				FROM (
+					SELECT 
+						id, 
+						quantity, 
+						created_at,
+						SUM(quantity) OVER (ORDER BY created_at, id ASC) AS running_total
+					FROM stocks
+					WHERE product_id = ?
+				) s
+				WHERE 
+					running_total <= ? 
+				OR (
+					running_total > ? 
+					AND (running_total - quantity) < ?
+				)
+				ORDER BY created_at, id;
 			`, reqStock.ProductID, reqStock.Quantity, reqStock.Quantity, reqStock.Quantity)
 
 			if err != nil {
