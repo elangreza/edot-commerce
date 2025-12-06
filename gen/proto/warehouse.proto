@@ -38,7 +38,7 @@ message ReleaseStockResponse {
 
 message SetWarehouseStatusRequest {
     int64 warehouse_id = 1;
-    bool status = 2;
+    bool is_active = 2;
 }
 
 message TransferStockBetweenWarehouseRequest {

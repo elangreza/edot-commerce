@@ -1,7 +1,7 @@
-insert into warehouses (id, name)
+insert into warehouses (id, name, is_active)
 values 
-    (1, 'w-JKT'),
-    (2, 'w-BDG');
+    (1, 'w-JKT', TRUE),
+    (2, 'w-BDG', TRUE);
 
 -- simulate the stock is spread across multiple warehouses and multiple shop
 

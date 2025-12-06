@@ -218,3 +218,12 @@ func (r *StockRepo) ReleaseStock(ctx context.Context, releaseStock entity.Releas
 	}
 	return releasedStockIDs, nil
 }
+
+func (r *StockRepo) SetWarehouseStatus(ctx context.Context, warehouseID int64, isActive bool) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE warehouses SET is_active = ? WHERE id = ?`, isActive, warehouseID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

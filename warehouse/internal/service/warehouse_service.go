@@ -16,6 +16,7 @@ type (
 		GetStocks(ctx context.Context, productIDs []string) ([]*entity.Stock, error)
 		ReserveStock(ctx context.Context, reserveStock entity.ReserveStock) ([]int64, error)
 		ReleaseStock(ctx context.Context, releaseStock entity.ReleaseStock) ([]int64, error)
+		SetWarehouseStatus(ctx context.Context, warehouseID int64, isActive bool) error
 	}
 
 	WarehouseService struct {
@@ -117,4 +118,13 @@ func (s *WarehouseService) ReleaseStock(ctx context.Context, req *gen.ReleaseSto
 	return &gen.ReleaseStockResponse{
 		ReleasedStockIds: releasedStockIDs,
 	}, nil
+}
+
+func (s *WarehouseService) SetWarehouseStatus(ctx context.Context, req *gen.SetWarehouseStatusRequest) (*gen.Empty, error) {
+	err := s.repo.SetWarehouseStatus(ctx, req.WarehouseId, req.GetIsActive())
+	if err != nil {
+		return nil, err
+	}
+
+	return &gen.Empty{}, nil
 }
