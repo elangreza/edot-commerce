@@ -15,6 +15,7 @@ type (
 		ReserveStock(ctx context.Context, reserveStock entity.ReserveStock) ([]int64, error)
 		ReleaseStock(ctx context.Context, releaseStock entity.ReleaseStock) ([]int64, error)
 		SetWarehouseStatus(ctx context.Context, warehouseID int64, isActive bool) error
+		TransferStockBetweenWarehouse(ctx context.Context, fromWarehouseID, toWarehouseID int64, productID string, quantity int64) error
 	}
 
 	WarehouseService struct {
@@ -104,9 +105,14 @@ func (s *WarehouseService) SetWarehouseStatus(ctx context.Context, req *gen.SetW
 		return nil, err
 	}
 
-	// if req.iSActive is false
-	// release the stock
-	// and notify the
+	return &gen.Empty{}, nil
+}
+
+func (s *WarehouseService) TransferStockBetweenWarehouse(ctx context.Context, req *gen.TransferStockBetweenWarehouseRequest) (*gen.Empty, error) {
+	err := s.repo.TransferStockBetweenWarehouse(ctx, req.FromWarehouseId, req.ToWarehouseId, req.ProductId, req.Quantity)
+	if err != nil {
+		return nil, err
+	}
 
 	return &gen.Empty{}, nil
 }

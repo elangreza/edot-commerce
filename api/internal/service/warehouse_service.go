@@ -43,3 +43,25 @@ func (s *WarehouseService) SetWarehouseStatus(ctx context.Context, req params.Se
 
 	return nil
 }
+
+func (s *WarehouseService) TransferStockBetweenWarehouse(ctx context.Context, req params.TransferStockBetweenWarehouseRequest) error {
+	userID, ok := ctx.Value(constanta.LocalUserID).(uuid.UUID)
+	if !ok {
+		return errors.New("error when parsing userID")
+	}
+
+	md := metadata.New(map[string]string{string(globalcontanta.UserIDKey): userID.String()})
+	newCtx := metadata.NewOutgoingContext(context.Background(), md)
+
+	_, err := s.WarehouseServiceClient.TransferStockBetweenWarehouse(newCtx, &gen.TransferStockBetweenWarehouseRequest{
+		FromWarehouseId: req.FromWarehouseId,
+		ToWarehouseId:   req.ToWarehouseId,
+		ProductId:       req.ProductId,
+		Quantity:        req.Quantity,
+	})
+	if err != nil {
+		return convertErrGrpc(err)
+	}
+
+	return nil
+}

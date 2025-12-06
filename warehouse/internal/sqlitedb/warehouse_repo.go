@@ -3,6 +3,7 @@ package sqlitedb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github/elangreza/edot-commerce/pkg/dbsql"
 	"github/elangreza/edot-commerce/warehouse/internal/constanta"
@@ -229,6 +230,76 @@ func (r *StockRepo) ReleaseStock(ctx context.Context, releaseStock entity.Releas
 
 func (r *StockRepo) SetWarehouseStatus(ctx context.Context, warehouseID int64, isActive bool) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE warehouses SET is_active = ? WHERE id = ?`, isActive, warehouseID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *StockRepo) TransferStockBetweenWarehouse(ctx context.Context, fromWarehouseID, toWarehouseID int64, productID string, quantity int64) error {
+	err := dbsql.WithTransaction(r.db, func(tx *sql.Tx) error {
+		var err error
+		var availableStock int64
+		var shopID int64
+		query := `SELECT quantity, shop_id FROM stocks WHERE product_id = ? AND warehouse_id = ?`
+		err = tx.QueryRowContext(ctx, query, productID, fromWarehouseID).Scan(&availableStock, &shopID)
+		if err != nil {
+			return err
+		}
+
+		if availableStock < quantity {
+			return fmt.Errorf("available stocks is less than request quantity")
+		}
+
+		qCheckWarehouse := "select is_active from warehouses where id = ?"
+		var sourceWareHouseIsActive bool
+		err = tx.QueryRowContext(ctx, qCheckWarehouse, fromWarehouseID).Scan(&sourceWareHouseIsActive)
+		if err != nil {
+			return err
+		}
+
+		if !sourceWareHouseIsActive {
+			return errors.New("source warehouse is inactive")
+		}
+
+		var destinationWareHouseIsActive bool
+		err = tx.QueryRowContext(ctx, qCheckWarehouse, toWarehouseID).Scan(&destinationWareHouseIsActive)
+		if err != nil {
+			return err
+		}
+
+		if !destinationWareHouseIsActive {
+			return errors.New("destination warehouse is inactive")
+		}
+
+		_, err = tx.ExecContext(ctx,
+			`UPDATE 
+				stocks
+			SET
+				quantity = quantity - ? 
+			WHERE 
+				product_id = ? 
+			AND 
+				warehouse_id = ?`,
+			quantity, productID, fromWarehouseID)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.ExecContext(ctx,
+			`INSERT INTO stocks (product_id, warehouse_id, shop_id, quantity)
+		 VALUES (?, ?, ?, ?)
+		 ON CONFLICT(product_id, shop_id, warehouse_id)
+		 DO UPDATE SET quantity = quantity + excluded.quantity`,
+			productID, toWarehouseID, shopID, quantity)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return err
 	}
