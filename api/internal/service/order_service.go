@@ -10,6 +10,7 @@ import (
 	"github.com/elangreza/edot-commerce/api/internal/constanta"
 	params "github.com/elangreza/edot-commerce/api/internal/params"
 	"github.com/elangreza/edot-commerce/gen"
+	"github.com/google/uuid"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -23,19 +24,55 @@ type orderService struct {
 	orderServiceClient gen.OrderServiceClient
 }
 
-func (s *orderService) ListProducts(ctx context.Context, req params.AddToCartRequest) error {
+func (s *orderService) AddProductToCart(ctx context.Context, req params.AddToCartRequest) error {
 
-	userID, ok := ctx.Value(constanta.LocalUserID).(string)
+	userID, ok := ctx.Value(constanta.LocalUserID).(uuid.UUID)
 	if !ok {
 		return errors.New("error when parsing userID")
 	}
 
-	ctx = metadata.AppendToOutgoingContext(ctx, string(globalcontanta.UserIDKey), userID)
+	md := metadata.New(map[string]string{string(globalcontanta.UserIDKey): userID.String()})
+	newCtx := metadata.NewOutgoingContext(context.Background(), md)
 
-	s.orderServiceClient.AddProductToCart(ctx, &gen.AddCartItemRequest{
+	_, err := s.orderServiceClient.AddProductToCart(newCtx, &gen.AddCartItemRequest{
 		ProductId: req.ProductID,
 		Quantity:  req.Quantity,
 	})
 
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (s *orderService) GetCart(ctx context.Context) (*params.GetCartResponse, error) {
+
+	userID, ok := ctx.Value(constanta.LocalUserID).(uuid.UUID)
+	if !ok {
+		return nil, errors.New("error when parsing userID")
+	}
+
+	md := metadata.New(map[string]string{string(globalcontanta.UserIDKey): userID.String()})
+	newCtx := metadata.NewOutgoingContext(context.Background(), md)
+
+	cart, err := s.orderServiceClient.GetCart(newCtx, &gen.Empty{})
+
+	if err != nil {
+		return nil, err
+	}
+
+	res := &params.GetCartResponse{
+		CartID: cart.Id,
+		Items:  []params.GetCartItemsResponse{},
+	}
+
+	for _, item := range cart.Items {
+		res.Items = append(res.Items, params.GetCartItemsResponse{
+			ProductID: item.ProductId,
+			Quantity:  item.Quantity,
+		})
+	}
+
+	return res, nil
 }

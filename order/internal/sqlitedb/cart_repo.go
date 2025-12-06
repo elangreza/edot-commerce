@@ -135,7 +135,7 @@ func (r *CartRepository) UpdateCartItem(ctx context.Context, item entity.CartIte
 	q := `UPDATE cart_items
 		SET quantity = ?, name = ?, price = ?
 		WHERE cart_id = ? AND product_id = ?;`
-	_, err := r.db.ExecContext(ctx, q, item.Quantity, item.Name, item.Price, item.CartID, item.ProductID)
+	_, err := r.db.ExecContext(ctx, q, item.Quantity, item.Name, item.Price.Units, item.CartID, item.ProductID)
 	if err != nil {
 		return err
 	}

@@ -25,11 +25,6 @@ import (
 
 func main() {
 
-	grpcClient, err := grpc.NewClient("localhost:50050", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	errChecker(err)
-
-	productService := service.NewProductService(gen.NewProductServiceClient(grpcClient))
-
 	handler := chi.NewRouter()
 
 	handler.Use(middleware.Recoverer)
@@ -59,8 +54,17 @@ func main() {
 	// service
 	authService := service.NewAuthService(userRepo, tokenRepo)
 
+	grpcClientProduct, err := grpc.NewClient("localhost:50050", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	errChecker(err)
+	productServiceClient := service.NewProductService(gen.NewProductServiceClient(grpcClientProduct))
+
+	grpcClientOrder, err := grpc.NewClient("localhost:50054", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	errChecker(err)
+	orderService := service.NewOrderService(gen.NewOrderServiceClient(grpcClientOrder))
+
 	rest.NewAuthHandler(handler, authService)
-	rest.NewProductHandler(handler, productService)
+	rest.NewProductHandler(handler, productServiceClient)
+	rest.NewOrderHandler(handler, authService, orderService)
 
 	srv := &http.Server{
 		Addr:           ":8080",

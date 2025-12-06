@@ -13,6 +13,7 @@ import (
 	"github.com/elangreza/edot-commerce/order/internal/entity"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -65,21 +66,34 @@ func NewOrderService(
 }
 
 func (s *orderService) AddProductToCart(ctx context.Context, req *gen.AddCartItemRequest) (*gen.Empty, error) {
-	userID, ok := ctx.Value(globalcontanta.UserIDKey).(uuid.UUID)
+	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, errors.New("unauthorized")
+	}
+	rawUserID := md.Get(string(globalcontanta.UserIDKey))
+
+	if len(rawUserID) == 0 {
+		return nil, errors.New("not valid userID")
+	}
+
+	userID, err := uuid.Parse(rawUserID[0])
+	if err != nil {
+		return nil, errors.New("failed to parse userID")
 	}
 
 	cart, err := s.cartRepo.GetCartByUserID(ctx, userID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		fmt.Println(1, err)
 		return nil, err
 	}
 
 	products, err := s.productServiceClient.GetProducts(ctx, false, req.ProductId)
 	if err != nil {
+		fmt.Println(2, err)
 		return nil, err
 	}
 	if products == nil || products.Products == nil || len(products.Products) == 0 {
+		fmt.Println(3, err)
 		return nil, errors.New("product not found")
 	}
 
@@ -100,6 +114,7 @@ func (s *orderService) AddProductToCart(ctx context.Context, req *gen.AddCartIte
 
 		err = s.cartRepo.CreateCart(ctx, *cart)
 		if err != nil {
+			fmt.Println(4, err)
 			return nil, err
 		}
 
@@ -115,6 +130,7 @@ func (s *orderService) AddProductToCart(ctx context.Context, req *gen.AddCartIte
 		Price:     product.GetPrice(),
 	})
 	if err != nil {
+		fmt.Println(5, err)
 		return nil, err
 	}
 
@@ -122,9 +138,19 @@ func (s *orderService) AddProductToCart(ctx context.Context, req *gen.AddCartIte
 }
 
 func (s *orderService) GetCart(ctx context.Context, req *gen.Empty) (*gen.Cart, error) {
-	userID, ok := ctx.Value(globalcontanta.UserIDKey).(uuid.UUID)
+	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, errors.New("unauthorized")
+	}
+	rawUserID := md.Get(string(globalcontanta.UserIDKey))
+
+	if len(rawUserID) == 0 {
+		return nil, errors.New("not valid userID")
+	}
+
+	userID, err := uuid.Parse(rawUserID[0])
+	if err != nil {
+		return nil, errors.New("failed to parse userID")
 	}
 
 	cart, err := s.cartRepo.GetCartByUserID(ctx, userID)
@@ -188,9 +214,19 @@ func (s *orderService) CreateOrder(ctx context.Context, req *gen.CreateOrderRequ
 		return ord.GetGenOrder(), nil
 	}
 
-	userID, ok := ctx.Value(globalcontanta.UserIDKey).(uuid.UUID)
+	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, errors.New("unauthorized")
+	}
+	rawUserID := md.Get(string(globalcontanta.UserIDKey))
+
+	if len(rawUserID) == 0 {
+		return nil, errors.New("not valid userID")
+	}
+
+	userID, err := uuid.Parse(rawUserID[0])
+	if err != nil {
+		return nil, errors.New("failed to parse userID")
 	}
 
 	cart, err := s.cartRepo.GetCartByUserID(ctx, userID)
