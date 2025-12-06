@@ -1,7 +1,6 @@
 package entity
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,8 +13,8 @@ type User struct {
 	Name     string    `db:"name"`
 	password []byte    `db:"password"`
 
-	CreatedAt time.Time    `db:"created_at"`
-	UpdatedAt sql.NullTime `db:"updated_at"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }
 
 func NewUser(email, password, name string) (*User, error) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github/elangreza/edot-commerce/pkg/dbsql"
 	"log"
 	"log/slog"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/elangreza/edot-commerce/api/internal/rest"
 	"github.com/elangreza/edot-commerce/api/internal/service"
+	sqlitedb "github.com/elangreza/edot-commerce/api/internal/sqlite"
 	"github.com/elangreza/edot-commerce/gen"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -43,12 +45,19 @@ func main() {
 		MaxAge:           300,
 	}))
 
-	// repositories
-	// userRepo := postgresql.NewUserRepo(dn)
-	// tokenRepo := postgresql.NewTokenRepo(dn)
+	db, err := dbsql.NewDbSql(
+		dbsql.WithSqliteDB("auth.db"),
+		dbsql.WithSqliteDBWalMode(),
+		dbsql.WithAutoMigrate("file://./migrations"),
+	)
+	errChecker(err)
 
-	// TODO services deps
-	authService := service.NewAuthService(nil, nil)
+	// repositories
+	userRepo := sqlitedb.NewUserRepo(db)
+	tokenRepo := sqlitedb.NewTokenRepo(db)
+
+	// service
+	authService := service.NewAuthService(userRepo, tokenRepo)
 
 	rest.NewAuthHandler(handler, authService)
 	rest.NewProductHandler(handler, productService)
@@ -73,11 +82,11 @@ func main() {
 			shutdownFunc: func(ctx context.Context) error {
 				return srv.Shutdown(ctx)
 			}},
-		// operation{
-		// 	name: "postgres",
-		// 	shutdownFunc: func(ctx context.Context) error {
-		// 		return dn.Close()
-		// 	}},
+		operation{
+			name: "sqlite",
+			shutdownFunc: func(ctx context.Context) error {
+				return db.Close()
+			}},
 	)
 }
 
