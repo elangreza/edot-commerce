@@ -9,18 +9,20 @@ import (
 	"github/elangreza/edot-commerce/warehouse/internal/constanta"
 	"github/elangreza/edot-commerce/warehouse/internal/entity"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
-type StockRepo struct {
+type WarehouseRepo struct {
 	db *sql.DB
 }
 
-func NewWarehouseRepo(db *sql.DB) *StockRepo {
-	return &StockRepo{db: db}
+func NewWarehouseRepo(db *sql.DB) *WarehouseRepo {
+	return &WarehouseRepo{db: db}
 }
 
 // GetStocks retrieves stock information for the given product IDs.
-func (r *StockRepo) GetStocks(ctx context.Context, productIDs []string) ([]*entity.Stock, error) {
+func (r *WarehouseRepo) GetStocks(ctx context.Context, productIDs []string) ([]*entity.Stock, error) {
 	if len(productIDs) == 0 {
 		return []*entity.Stock{}, nil
 	}
@@ -56,7 +58,7 @@ func (r *StockRepo) GetStocks(ctx context.Context, productIDs []string) ([]*enti
 	return stocks, nil
 }
 
-func (r *StockRepo) ReserveStock(ctx context.Context, reserveStock entity.ReserveStock) ([]int64, error) {
+func (r *WarehouseRepo) ReserveStock(ctx context.Context, reserveStock entity.ReserveStock) ([]int64, error) {
 	reservedStockIDs := []int64{}
 	err := dbsql.WithTransaction(r.db, func(tx *sql.Tx) error {
 		for _, reqStock := range reserveStock.Stocks {
@@ -172,7 +174,7 @@ func (r *StockRepo) ReserveStock(ctx context.Context, reserveStock entity.Reserv
 	return reservedStockIDs, nil
 }
 
-func (r *StockRepo) ReleaseStock(ctx context.Context, releaseStock entity.ReleaseStock) ([]int64, error) {
+func (r *WarehouseRepo) ReleaseStock(ctx context.Context, releaseStock entity.ReleaseStock) ([]int64, error) {
 	releasedStockIDs := []int64{}
 	err := dbsql.WithTransaction(r.db, func(tx *sql.Tx) error {
 
@@ -228,7 +230,7 @@ func (r *StockRepo) ReleaseStock(ctx context.Context, releaseStock entity.Releas
 	return releasedStockIDs, nil
 }
 
-func (r *StockRepo) SetWarehouseStatus(ctx context.Context, warehouseID int64, isActive bool) error {
+func (r *WarehouseRepo) SetWarehouseStatus(ctx context.Context, warehouseID int64, isActive bool) error {
 	_, err := r.db.ExecContext(ctx, `UPDATE warehouses SET is_active = ? WHERE id = ?`, isActive, warehouseID)
 	if err != nil {
 		return err
@@ -237,7 +239,7 @@ func (r *StockRepo) SetWarehouseStatus(ctx context.Context, warehouseID int64, i
 	return nil
 }
 
-func (r *StockRepo) TransferStockBetweenWarehouse(ctx context.Context, fromWarehouseID, toWarehouseID int64, productID string, quantity int64) error {
+func (r *WarehouseRepo) TransferStockBetweenWarehouse(ctx context.Context, fromWarehouseID, toWarehouseID int64, productID string, quantity int64) error {
 	err := dbsql.WithTransaction(r.db, func(tx *sql.Tx) error {
 		var err error
 		var availableStock int64
@@ -305,4 +307,90 @@ func (r *StockRepo) TransferStockBetweenWarehouse(ctx context.Context, fromWareh
 	}
 
 	return nil
+}
+
+func (pm *WarehouseRepo) GetWarehouseByIDs(ctx context.Context, productID ...uuid.UUID) ([]entity.Warehouse, error) {
+	q := `select
+		id,
+		name,
+		is_active
+	from warehouses
+	where id = ?`
+	args := []any{}
+	qMarks := buildPlaceHoldersInClause(len(productID))
+
+	for _, v := range productID {
+		args = append(args, v)
+	}
+
+	if len(productID) > 1 {
+		q = `select
+		id,
+		name,
+		is_active
+	from warehouses
+	where id IN (` + qMarks + `)`
+	}
+	rows, err := pm.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	warehouses := []entity.Warehouse{}
+
+	for rows.Next() {
+		var w entity.Warehouse
+		err := rows.Scan(
+			&w.ID,
+			&w.Name,
+			&w.IsActive,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		warehouses = append(warehouses, w)
+	}
+
+	return warehouses, nil
+}
+
+func (pm *WarehouseRepo) GetWarehouseByShopID(ctx context.Context, shopID int64) ([]entity.Warehouse, error) {
+
+	q := `
+	SELECT w.id, w.name, w.is_active FROM stocks s 
+	LEFT JOIN warehouses w ON w.id=s.warehouse_id 
+	WHERE s.shop_id = ? GROUP BY w.id`
+
+	rows, err := pm.db.QueryContext(ctx, q, shopID)
+	if err != nil {
+		return nil, err
+	}
+
+	warehouses := []entity.Warehouse{}
+
+	for rows.Next() {
+		var w entity.Warehouse
+		err := rows.Scan(
+			&w.ID,
+			&w.Name,
+			&w.IsActive,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		warehouses = append(warehouses, w)
+	}
+
+	return warehouses, nil
+}
+
+func buildPlaceHoldersInClause(lenitems int) string {
+	if lenitems == 0 {
+		return ""
+	}
+
+	qMarks := strings.Repeat("?,", lenitems-1) + "?"
+	return qMarks
 }

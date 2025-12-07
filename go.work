@@ -7,4 +7,5 @@ use (
 	./pkg
 	./product
 	./warehouse
+	./shop
 )

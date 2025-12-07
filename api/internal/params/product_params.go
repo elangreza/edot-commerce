@@ -12,14 +12,22 @@ type Money struct {
 	CurrencyCode string `json:"currency_code,omitempty"`
 }
 
+type WareHouse struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	IsActive bool   `json:"is_active"`
+}
+
 type Product struct {
-	Id          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	ImageUrl    string `json:"image_url"`
-	Price       *Money `json:"price"`
-	Stock       int64  `json:"stock"`
-	ShopID      int64  `json:"shop_id"`
+	Id             string      `json:"id"`
+	Name           string      `json:"name"`
+	Description    string      `json:"description"`
+	ImageUrl       string      `json:"image_url"`
+	Price          *Money      `json:"price"`
+	Stock          int64       `json:"stock"`
+	ShopID         int64       `json:"shop_id"`
+	ShopName       string      `json:"shop_name"`
+	ShopWareHouses []WareHouse `json:"shop_ware_houses,omitempty"`
 }
 
 type ListProductsResponse struct {

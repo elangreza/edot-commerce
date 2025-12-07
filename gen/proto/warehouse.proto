@@ -48,10 +48,24 @@ message TransferStockBetweenWarehouseRequest {
     int64 quantity = 4;
 }
 
+message Warehouse {
+    int64 id = 1;
+    string name = 2;
+    bool is_active = 3;
+}
+
+message GetWarehouseByShopIDRequest {
+    int64 shop_id = 1;
+}
+message GetWarehouseByShopIDResponse {
+    repeated Warehouse warehouses = 1;
+}
+
 service WarehouseService {
     rpc GetStocks(GetStockRequest) returns (StockList) {}
     rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse) {}
     rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse) {}
     rpc SetWarehouseStatus(SetWarehouseStatusRequest) returns (Empty) {}
     rpc TransferStockBetweenWarehouse(TransferStockBetweenWarehouseRequest) returns (Empty) {}
+    rpc GetWarehouseByShopID(GetWarehouseByShopIDRequest) returns (GetWarehouseByShopIDResponse) {}
 }

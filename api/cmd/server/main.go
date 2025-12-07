@@ -52,7 +52,10 @@ func main() {
 
 	grpcClientProduct, err := grpc.NewClient("localhost:50050", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	errChecker(err)
-	productServiceClient := service.NewProductService(gen.NewProductServiceClient(grpcClientProduct))
+
+	grpcClientShop, err := grpc.NewClient("localhost:50055", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	errChecker(err)
+	productServiceClient := service.NewProductService(gen.NewProductServiceClient(grpcClientProduct), gen.NewShopServiceClient(grpcClientShop))
 
 	grpcClientOrder, err := grpc.NewClient("localhost:50054", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	errChecker(err)

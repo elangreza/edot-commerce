@@ -9,18 +9,22 @@ import (
 	"github.com/elangreza/edot-commerce/gen"
 )
 
-func NewProductService(pClient gen.ProductServiceClient) *productService {
+func NewProductService(
+	pClient gen.ProductServiceClient,
+	sClient gen.ShopServiceClient,
+) *productService {
 	return &productService{
 		productServiceClient: pClient,
+		shopServiceClient:    sClient,
 	}
 }
 
 type productService struct {
 	productServiceClient gen.ProductServiceClient
+	shopServiceClient    gen.ShopServiceClient
 }
 
 func (s *productService) ListProducts(ctx context.Context, req params.ListProductsRequest) (*params.ListProductsResponse, error) {
-
 	listProduct, err := s.productServiceClient.ListProducts(ctx, &gen.ListProductsRequest{
 		Search: req.Search,
 		Limit:  req.Limit,
@@ -38,8 +42,26 @@ func (s *productService) ListProducts(ctx context.Context, req params.ListProduc
 		TotalPages: listProduct.GetTotalPages(),
 	}
 
+	shopIDs := []int64{}
 	for _, product := range listProduct.Products {
-		res.Products = append(res.Products, &params.Product{
+		shopIDs = append(shopIDs, product.ShopId)
+	}
+
+	shops, err := s.shopServiceClient.GetShops(ctx, &gen.GetShopsRequest{
+		Ids:            shopIDs,
+		WithWarehouses: false,
+	})
+	if err != nil {
+		return nil, convertErrGrpc(err)
+	}
+
+	shopsMap := make(map[int64]string)
+	for _, shop := range shops.Shops {
+		shopsMap[shop.GetId()] = shop.Name
+	}
+
+	for _, product := range listProduct.Products {
+		p := &params.Product{
 			Id:          product.GetId(),
 			Name:        product.GetName(),
 			Description: product.GetDescription(),
@@ -50,7 +72,12 @@ func (s *productService) ListProducts(ctx context.Context, req params.ListProduc
 				CurrencyCode: product.Price.GetCurrencyCode(),
 			},
 			ShopID: product.GetShopId(),
-		})
+		}
+		shopName, ok := shopsMap[product.GetShopId()]
+		if ok {
+			p.ShopName = shopName
+		}
+		res.Products = append(res.Products, p)
 	}
 
 	return res, nil

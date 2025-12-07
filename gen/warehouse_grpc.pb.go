@@ -24,6 +24,7 @@ const (
 	WarehouseService_ReleaseStock_FullMethodName                  = "/gen.WarehouseService/ReleaseStock"
 	WarehouseService_SetWarehouseStatus_FullMethodName            = "/gen.WarehouseService/SetWarehouseStatus"
 	WarehouseService_TransferStockBetweenWarehouse_FullMethodName = "/gen.WarehouseService/TransferStockBetweenWarehouse"
+	WarehouseService_GetWarehouseByShopID_FullMethodName          = "/gen.WarehouseService/GetWarehouseByShopID"
 )
 
 // WarehouseServiceClient is the client API for WarehouseService service.
@@ -35,6 +36,7 @@ type WarehouseServiceClient interface {
 	ReleaseStock(ctx context.Context, in *ReleaseStockRequest, opts ...grpc.CallOption) (*ReleaseStockResponse, error)
 	SetWarehouseStatus(ctx context.Context, in *SetWarehouseStatusRequest, opts ...grpc.CallOption) (*Empty, error)
 	TransferStockBetweenWarehouse(ctx context.Context, in *TransferStockBetweenWarehouseRequest, opts ...grpc.CallOption) (*Empty, error)
+	GetWarehouseByShopID(ctx context.Context, in *GetWarehouseByShopIDRequest, opts ...grpc.CallOption) (*GetWarehouseByShopIDResponse, error)
 }
 
 type warehouseServiceClient struct {
@@ -95,6 +97,16 @@ func (c *warehouseServiceClient) TransferStockBetweenWarehouse(ctx context.Conte
 	return out, nil
 }
 
+func (c *warehouseServiceClient) GetWarehouseByShopID(ctx context.Context, in *GetWarehouseByShopIDRequest, opts ...grpc.CallOption) (*GetWarehouseByShopIDResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWarehouseByShopIDResponse)
+	err := c.cc.Invoke(ctx, WarehouseService_GetWarehouseByShopID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // WarehouseServiceServer is the server API for WarehouseService service.
 // All implementations must embed UnimplementedWarehouseServiceServer
 // for forward compatibility.
@@ -104,6 +116,7 @@ type WarehouseServiceServer interface {
 	ReleaseStock(context.Context, *ReleaseStockRequest) (*ReleaseStockResponse, error)
 	SetWarehouseStatus(context.Context, *SetWarehouseStatusRequest) (*Empty, error)
 	TransferStockBetweenWarehouse(context.Context, *TransferStockBetweenWarehouseRequest) (*Empty, error)
+	GetWarehouseByShopID(context.Context, *GetWarehouseByShopIDRequest) (*GetWarehouseByShopIDResponse, error)
 	mustEmbedUnimplementedWarehouseServiceServer()
 }
 
@@ -128,6 +141,9 @@ func (UnimplementedWarehouseServiceServer) SetWarehouseStatus(context.Context, *
 }
 func (UnimplementedWarehouseServiceServer) TransferStockBetweenWarehouse(context.Context, *TransferStockBetweenWarehouseRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TransferStockBetweenWarehouse not implemented")
+}
+func (UnimplementedWarehouseServiceServer) GetWarehouseByShopID(context.Context, *GetWarehouseByShopIDRequest) (*GetWarehouseByShopIDResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWarehouseByShopID not implemented")
 }
 func (UnimplementedWarehouseServiceServer) mustEmbedUnimplementedWarehouseServiceServer() {}
 func (UnimplementedWarehouseServiceServer) testEmbeddedByValue()                          {}
@@ -240,6 +256,24 @@ func _WarehouseService_TransferStockBetweenWarehouse_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
+func _WarehouseService_GetWarehouseByShopID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWarehouseByShopIDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(WarehouseServiceServer).GetWarehouseByShopID(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: WarehouseService_GetWarehouseByShopID_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(WarehouseServiceServer).GetWarehouseByShopID(ctx, req.(*GetWarehouseByShopIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // WarehouseService_ServiceDesc is the grpc.ServiceDesc for WarehouseService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -266,6 +300,10 @@ var WarehouseService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TransferStockBetweenWarehouse",
 			Handler:    _WarehouseService_TransferStockBetweenWarehouse_Handler,
+		},
+		{
+			MethodName: "GetWarehouseByShopID",
+			Handler:    _WarehouseService_GetWarehouseByShopID_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

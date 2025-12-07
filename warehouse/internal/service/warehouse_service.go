@@ -16,6 +16,8 @@ type (
 		ReleaseStock(ctx context.Context, releaseStock entity.ReleaseStock) ([]int64, error)
 		SetWarehouseStatus(ctx context.Context, warehouseID int64, isActive bool) error
 		TransferStockBetweenWarehouse(ctx context.Context, fromWarehouseID, toWarehouseID int64, productID string, quantity int64) error
+		GetWarehouseByIDs(ctx context.Context, productID ...uuid.UUID) ([]entity.Warehouse, error)
+		GetWarehouseByShopID(ctx context.Context, shopID int64) ([]entity.Warehouse, error)
 	}
 
 	WarehouseService struct {
@@ -115,4 +117,25 @@ func (s *WarehouseService) TransferStockBetweenWarehouse(ctx context.Context, re
 	}
 
 	return &gen.Empty{}, nil
+}
+
+func (s *WarehouseService) GetWarehouseByShopID(ctx context.Context, req *gen.GetWarehouseByShopIDRequest) (*gen.GetWarehouseByShopIDResponse, error) {
+
+	warehouses, err := s.repo.GetWarehouseByShopID(ctx, req.ShopId)
+	if err != nil {
+		return nil, err
+	}
+
+	res := []*gen.Warehouse{}
+	for _, warehouse := range warehouses {
+		res = append(res, &gen.Warehouse{
+			Id:       warehouse.ID,
+			Name:     warehouse.Name,
+			IsActive: warehouse.IsActive,
+		})
+	}
+
+	return &gen.GetWarehouseByShopIDResponse{
+		Warehouses: res,
+	}, nil
 }
