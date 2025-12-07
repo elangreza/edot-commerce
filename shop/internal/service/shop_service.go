@@ -2,7 +2,8 @@ package service
 
 import (
 	"context"
-	"github/elangreza/edot-commerce/shop/internal/entity"
+
+	"github.com/elangreza/edot-commerce/shop/internal/entity"
 
 	"github.com/elangreza/edot-commerce/gen"
 )

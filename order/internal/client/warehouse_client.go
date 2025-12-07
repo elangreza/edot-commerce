@@ -3,7 +3,8 @@ package client
 import (
 	"context"
 	"errors"
-	"github/elangreza/edot-commerce/pkg/globalcontanta"
+
+	"github.com/elangreza/edot-commerce/pkg/globalcontanta"
 
 	"github.com/elangreza/edot-commerce/gen"
 	"github.com/elangreza/edot-commerce/order/internal/entity"
@@ -20,7 +21,7 @@ type (
 )
 
 func NewWarehouseClient() (*warehouseServiceClient, error) {
-	grpcClient, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	grpcClient, err := grpc.NewClient("localhost:50053", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}

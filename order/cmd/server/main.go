@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"github/elangreza/edot-commerce/pkg/dbsql"
-	"github/elangreza/edot-commerce/pkg/gracefulshutdown"
 	"time"
+
+	"github.com/elangreza/edot-commerce/pkg/dbsql"
+	"github.com/elangreza/edot-commerce/pkg/gracefulshutdown"
 
 	"log"
 
@@ -45,7 +45,7 @@ func main() {
 		productClient)
 
 	srv := server.New(orderService)
-	address := fmt.Sprintf(":%v", 50054)
+	address := "localhost:50051"
 	go func() {
 		if err := srv.Start(address); err != nil {
 			log.Fatalf("failed to serve: %v", err)

@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"github/elangreza/edot-commerce/pkg/dbsql"
-	"github/elangreza/edot-commerce/pkg/gracefulshutdown"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/elangreza/edot-commerce/pkg/dbsql"
+	"github.com/elangreza/edot-commerce/pkg/gracefulshutdown"
 
 	"github.com/elangreza/edot-commerce/api/internal/rest"
 	"github.com/elangreza/edot-commerce/api/internal/service"
@@ -50,23 +51,28 @@ func main() {
 	// service
 	authService := service.NewAuthService(userRepo, tokenRepo)
 
-	grpcClientProduct, err := grpc.NewClient("localhost:50050", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// order
+	grpcClientOrder, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	errChecker(err)
 
-	grpcClientShop, err := grpc.NewClient("localhost:50055", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// product
+	grpcClientProduct, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	errChecker(err)
-	productServiceClient := service.NewProductService(gen.NewProductServiceClient(grpcClientProduct), gen.NewShopServiceClient(grpcClientShop))
 
-	grpcClientOrder, err := grpc.NewClient("localhost:50054", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// warehouse
+	grpcClientWarehouse, err := grpc.NewClient("localhost:50053", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	errChecker(err)
+
+	// shop
+	grpcClientShop, err := grpc.NewClient("localhost:50054", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	errChecker(err)
+
+	productService := service.NewProductService(gen.NewProductServiceClient(grpcClientProduct), gen.NewShopServiceClient(grpcClientShop))
 	orderService := service.NewOrderService(gen.NewOrderServiceClient(grpcClientOrder))
-
-	grpcClientWarehouse, err := grpc.NewClient("localhost:50052", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	errChecker(err)
 	warehouseService := service.NewWarehouseService(gen.NewWarehouseServiceClient(grpcClientWarehouse))
 
 	rest.NewAuthHandler(handler, authService)
-	rest.NewProductHandler(handler, productServiceClient)
+	rest.NewProductHandler(handler, productService)
 	rest.NewOrderHandler(handler, authService, orderService)
 	rest.NewWarehouseHandler(handler, authService, warehouseService)
 

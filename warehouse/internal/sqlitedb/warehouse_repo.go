@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github/elangreza/edot-commerce/pkg/dbsql"
-	"github/elangreza/edot-commerce/warehouse/internal/constanta"
-	"github/elangreza/edot-commerce/warehouse/internal/entity"
 	"strings"
+
+	"github.com/elangreza/edot-commerce/warehouse/internal/constanta"
+	"github.com/elangreza/edot-commerce/warehouse/internal/entity"
+
+	"github.com/elangreza/edot-commerce/pkg/dbsql"
 
 	"github.com/google/uuid"
 )

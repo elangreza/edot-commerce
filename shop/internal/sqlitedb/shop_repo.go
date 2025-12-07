@@ -3,8 +3,9 @@ package sqlitedb
 import (
 	"context"
 	"database/sql"
-	"github/elangreza/edot-commerce/shop/internal/entity"
 	"strings"
+
+	"github.com/elangreza/edot-commerce/shop/internal/entity"
 )
 
 type ShopRepo struct {

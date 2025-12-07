@@ -1,8 +1,11 @@
-module github/elangreza/edot-commerce/pkg
+module github.com/elangreza/edot-commerce/pkg
 
 go 1.24.3
 
+replace github.com/elangreza/edot-commerce/gen => ../gen
+
 require (
+	github.com/elangreza/edot-commerce/gen v0.0.0-00010101000000-000000000000
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
@@ -13,6 +16,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect

@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
-	"github/elangreza/edot-commerce/pkg/dbsql"
-	"github/elangreza/edot-commerce/pkg/gracefulshutdown"
-	"github/elangreza/edot-commerce/shop/internal/client"
-	"github/elangreza/edot-commerce/shop/internal/server"
-	"github/elangreza/edot-commerce/shop/internal/service"
-	"github/elangreza/edot-commerce/shop/internal/sqlitedb"
 	"log"
 	"time"
+
+	"github.com/elangreza/edot-commerce/shop/internal/client"
+	"github.com/elangreza/edot-commerce/shop/internal/server"
+	"github.com/elangreza/edot-commerce/shop/internal/service"
+	"github.com/elangreza/edot-commerce/shop/internal/sqlitedb"
+
+	"github.com/elangreza/edot-commerce/pkg/dbsql"
+	"github.com/elangreza/edot-commerce/pkg/gracefulshutdown"
 
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
@@ -30,7 +32,7 @@ func main() {
 	shopRepo := sqlitedb.NewShopRepo(db)
 	shopService := service.NewShopService(shopRepo, warehouseClient)
 
-	address := "localhost:50055"
+	address := "localhost:50054"
 
 	srv := server.New(shopService)
 	go func() {

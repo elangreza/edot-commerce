@@ -5,7 +5,8 @@ package service
 import (
 	"context"
 	"errors"
-	"github/elangreza/edot-commerce/pkg/globalcontanta"
+
+	"github.com/elangreza/edot-commerce/pkg/globalcontanta"
 
 	"github.com/elangreza/edot-commerce/api/internal/constanta"
 	params "github.com/elangreza/edot-commerce/api/internal/params"

@@ -2,7 +2,8 @@ package extractor
 
 import (
 	"context"
-	"github/elangreza/edot-commerce/pkg/globalcontanta"
+
+	"github.com/elangreza/edot-commerce/pkg/globalcontanta"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"

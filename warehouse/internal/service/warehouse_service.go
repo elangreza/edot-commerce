@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
-	"github/elangreza/edot-commerce/pkg/extractor"
-	"github/elangreza/edot-commerce/warehouse/internal/entity"
+
+	"github.com/elangreza/edot-commerce/warehouse/internal/entity"
+
+	"github.com/elangreza/edot-commerce/pkg/extractor"
 
 	"github.com/elangreza/edot-commerce/gen"
 	"github.com/google/uuid"

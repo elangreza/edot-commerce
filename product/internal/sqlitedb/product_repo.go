@@ -3,8 +3,9 @@ package sqlitedb
 import (
 	"context"
 	"database/sql"
-	"github/elangreza/edot-commerce/pkg/money"
 	"strings"
+
+	"github.com/elangreza/edot-commerce/pkg/money"
 
 	"github.com/elangreza/edot-commerce/product/internal/entity"
 	"github.com/google/uuid"

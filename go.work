@@ -6,6 +6,6 @@ use (
 	./order
 	./pkg
 	./product
-	./warehouse
 	./shop
+	./warehouse
 )

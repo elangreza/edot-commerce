@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"github/elangreza/edot-commerce/pkg/dbsql"
-	"github/elangreza/edot-commerce/pkg/gracefulshutdown"
 	"log"
 	"time"
+
+	"github.com/elangreza/edot-commerce/pkg/dbsql"
+	"github.com/elangreza/edot-commerce/pkg/gracefulshutdown"
 
 	"github.com/elangreza/edot-commerce/product/internal/client"
 	"github.com/elangreza/edot-commerce/product/internal/server"
@@ -33,7 +33,7 @@ func main() {
 	warehouseClient, err := client.NewWarehouseClient()
 	errChecker(err)
 
-	address := fmt.Sprintf("localhost:%v", 50050)
+	address := "localhost:50052"
 
 	productService := service.NewProductService(productRepo, warehouseClient)
 	srv := server.New(productService)
